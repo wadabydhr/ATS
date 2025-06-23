@@ -1,3 +1,4 @@
 nicegui
 descope
 python-dotenv
+gunicorn
