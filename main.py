@@ -21,7 +21,7 @@ def get_user_from_cookie(request: Request):
 
 @ui.page('/')
 async def main():
-    request = app.native.request
+    request = ui.context.request
     user = get_user_from_cookie(request)
     if user:
         ui.label(f"Welcome, {user.get('name') or user.get('loginId', 'User')}!").classes('text-2xl')
