@@ -74,10 +74,11 @@ async def auth_redirect(request: Request):
         print("JWT token created")
 
         # Set browser cookie BEFORE redirect
-        app.storage.browser[JWT_TOKEN_KEY] = jwt_token
-        print("JWT token stored in browser storage")
+        response = RedirectResponse("/dashboard")
+        response.set_cookie(key=JWT_TOKEN_KEY, value=jwt_token, httponly=True, max_age=7*24*3600)
+        print("JWT token stored in browser cookie")
 
-        return RedirectResponse("/dashboard")
+        return response
 
     except Exception as e:
         print(f"OAuth processing error: {e}")
@@ -90,15 +91,14 @@ def decode_jwt_token(token: str):
         print(f"JWT decode failed: {e}")
         return None
 
-def get_current_user():
-    token = app.storage.browser.get(JWT_TOKEN_KEY)
+def get_current_user(request: Request):
+    token = request.cookies.get(JWT_TOKEN_KEY)
     if not token:
-        print("No JWT token found in storage")
+        print("No JWT token found in cookies")
         return None
     data = decode_jwt_token(token)
     if not data:
         print("Invalid or expired JWT token")
-        del app.storage.browser[JWT_TOKEN_KEY]
         return None
     user = users_collection.find_one({"email": data["email"]})
     if user:
@@ -111,14 +111,14 @@ def get_current_user():
 async def home():
     ui.label("Welcome to the ATS Application!")
     ui.link("Go to Dashboard", "/dashboard")
-    ui.link("Login with Google", "/oauth/google/login")
+    ui.button("Login with Google", on_click=lambda: ui.open("/oauth/google/login"))
 
 @ui.page("/dashboard", title="ATS Dashboard")
-async def dashboard():
-    user = get_current_user()
+async def dashboard(request: Request):
+    user = get_current_user(request)
     if not user:
         ui.label("Unauthorized. Please log in.")
-        ui.link("Login with Google", "/oauth/google/login")
+        ui.button("Login with Google", on_click=lambda: ui.open("/oauth/google/login"))
     else:
         ui.label(f"Hello, {user['name']}!")
         if user.get("picture"):
@@ -128,8 +128,9 @@ async def dashboard():
 @app.get("/logout")
 async def logout(request: Request):
     print("Logging out, clearing JWT")
-    del app.storage.browser[JWT_TOKEN_KEY]
-    return RedirectResponse("/")
+    response = RedirectResponse("/")
+    response.delete_cookie(JWT_TOKEN_KEY)
+    return response
 
 if __name__ in {"__main__", "__mp_main__"}:
     port = int(os.environ.get("PORT", 8080))
