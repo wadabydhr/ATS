@@ -111,15 +111,16 @@ def get_current_user(request: Request):
 async def home():
     ui.label("Welcome to the ATS Application!")
     ui.link("Go to Dashboard", "/dashboard")
-    # Button to trigger OAuth login using real browser navigation
-    ui.button('Login with Google', on_click=lambda: ui.run_javascript('window.location.href="/oauth/google/login"'))
+    #ui.button("Login with Google", on_click=lambda: ui.open("/oauth/google/login"))
+    # This button opens Google OAuth login in a new tab
+    ui.button("Login with Google", on_click=lambda: ui.open('/oauth/google/login', new_tab=True))
 
 @ui.page("/dashboard", title="ATS Dashboard")
 async def dashboard(request: Request):
     user = get_current_user(request)
     if not user:
         ui.label("Unauthorized. Please log in.")
-        ui.button("Login with Google", on_click=lambda: ui.run_javascript('window.location.href="/oauth/google/login"'))
+        ui.button("Login with Google", on_click=lambda: ui.open("/oauth/google/login"))
     else:
         ui.label(f"Hello, {user['name']}!")
         if user.get("picture"):
