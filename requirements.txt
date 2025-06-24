@@ -2,3 +2,9 @@ nicegui
 descope
 python-dotenv
 gunicorn
+fastapi
+authlib
+python-jose
+pymongo
+python-dotenv
+uvicorn
