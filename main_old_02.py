@@ -38,74 +38,55 @@ oauth.register(
 
 @app.get("/oauth/google/login")
 async def login(request: Request):
-    print("Redirecting to Google OAuth...")
     return await oauth.google.authorize_redirect(request, f"{BASE_URL}/oauth/google/redirect")
 
 @app.get("/oauth/google/redirect")
 async def auth_redirect(request: Request):
     try:
-        print("Received redirect from Google, processing token...")
         token = await oauth.google.authorize_access_token(request)
         userinfo = token.get("userinfo")
-        print("Userinfo received:", userinfo)
-
         if not userinfo:
-            print("No userinfo found in token!")
             return RedirectResponse("/")
 
-        # Check if user exists or register new user
+        # Check if user exists
         user = users_collection.find_one({"email": userinfo["email"]})
         if not user:
-            print("Registering new user:", userinfo["email"])
+            # Register user
             users_collection.insert_one({
                 "email": userinfo["email"],
                 "name": userinfo["name"],
                 "picture": userinfo.get("picture"),
                 "created": datetime.utcnow()
             })
-        else:
-            print("User exists:", userinfo["email"])
 
         # Create JWT
         jwt_token = jwt.encode({
             "email": userinfo["email"],
             "exp": datetime.utcnow() + JWT_TOKEN_LIFETIME
         }, APP_STORAGE_SECRET, algorithm="HS256")
-        print("JWT token created")
 
-        # Set browser cookie BEFORE redirect
         app.storage.browser[JWT_TOKEN_KEY] = jwt_token
-        print("JWT token stored in browser storage")
-
         return RedirectResponse("/dashboard")
 
     except Exception as e:
-        print(f"OAuth processing error: {e}")
+        print(f"OAuth Error: {e}")
         return RedirectResponse("/")
 
 def decode_jwt_token(token: str):
     try:
         return jwt.decode(token, APP_STORAGE_SECRET, algorithms=["HS256"])
-    except Exception as e:
-        print(f"JWT decode failed: {e}")
+    except:
         return None
 
 def get_current_user():
     token = app.storage.browser.get(JWT_TOKEN_KEY)
     if not token:
-        print("No JWT token found in storage")
         return None
     data = decode_jwt_token(token)
     if not data:
-        print("Invalid or expired JWT token")
         del app.storage.browser[JWT_TOKEN_KEY]
         return None
-    user = users_collection.find_one({"email": data["email"]})
-    if user:
-        print(f"User retrieved for dashboard: {user['email']}")
-    else:
-        print("No user found for this JWT email")
-    return user
+    return users_collection.find_one({"email": data["email"]})
 
 @ui.page("/", title="ATS Home")
 async def home():
@@ -127,7 +108,6 @@ async def dashboard():
 
 @app.get("/logout")
 async def logout(request: Request):
-    print("Logging out, clearing JWT")
     del app.storage.browser[JWT_TOKEN_KEY]
     return RedirectResponse("/")
 
