@@ -7,7 +7,6 @@ from authlib.integrations.starlette_client import OAuth
 import jwt
 from pymongo import MongoClient
 from dotenv import load_dotenv
-from starlette.middleware.sessions import SessionMiddleware
 
 # Load environment variables
 load_dotenv()
@@ -23,9 +22,6 @@ mongo_client = MongoClient(os.getenv("MONGO_URI"))
 db = mongo_client["ats_db"]
 users_collection = db["users"]
 
-# Add SessionMiddleware for OAuth
-app.add_middleware(SessionMiddleware, secret_key=APP_STORAGE_SECRET)
-
 # OAuth configuration
 oauth = OAuth()
 oauth.register(
@@ -36,10 +32,12 @@ oauth.register(
     client_kwargs={"scope": "openid email profile"},
 )
 
+# OAuth login route
 @app.get("/oauth/google/login")
 async def login(request: Request):
     return await oauth.google.authorize_redirect(request, f"{BASE_URL}/oauth/google/redirect")
 
+# OAuth redirect callback
 @app.get("/oauth/google/redirect")
 async def auth_redirect(request: Request):
     try:
@@ -72,12 +70,14 @@ async def auth_redirect(request: Request):
         print(f"OAuth Error: {e}")
         return RedirectResponse("/")
 
+# JWT decode utility
 def decode_jwt_token(token: str):
     try:
         return jwt.decode(token, APP_STORAGE_SECRET, algorithms=["HS256"])
     except:
         return None
 
+# Retrieve current user based on JWT
 def get_current_user():
     token = app.storage.browser.get(JWT_TOKEN_KEY)
     if not token:
@@ -88,12 +88,14 @@ def get_current_user():
         return None
     return users_collection.find_one({"email": data["email"]})
 
+# Home page
 @ui.page("/", title="ATS Home")
 async def home():
     ui.label("Welcome to the ATS Application!")
     ui.link("Go to Dashboard", "/dashboard")
     ui.link("Login with Google", "/oauth/google/login")
 
+# Protected dashboard
 @ui.page("/dashboard", title="ATS Dashboard")
 async def dashboard():
     user = get_current_user()
@@ -106,11 +108,14 @@ async def dashboard():
             ui.image(user["picture"])
         ui.link("Logout", "/logout")
 
+# Logout route
 @app.get("/logout")
 async def logout(request: Request):
     del app.storage.browser[JWT_TOKEN_KEY]
     return RedirectResponse("/")
 
+# Start the server
 if __name__ in {"__main__", "__mp_main__"}:
+    import os
     port = int(os.environ.get("PORT", 8080))
     ui.run(host="0.0.0.0", port=port)
