@@ -115,7 +115,7 @@ async def logout(request: Request):
     return RedirectResponse("/")
 
 # Start the server
-if __name__ == "__main__":
+if __name__ in {"__main__", "__mp_main__"}:
     import os
     port = int(os.environ.get("PORT", 8080))
     ui.run(host="0.0.0.0", port=port)
