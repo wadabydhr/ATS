@@ -111,7 +111,9 @@ def get_current_user(request: Request):
 async def home():
     ui.label("Welcome to the ATS Application!")
     ui.link("Go to Dashboard", "/dashboard")
-    ui.button("Login with Google", on_click=lambda: ui.open("/oauth/google/login"))
+    #ui.button("Login with Google", on_click=lambda: ui.open("/oauth/google/login"))
+    # This button opens Google OAuth login in a new tab
+    ui.button("Login with Google", on_click=lambda: ui.open('/oauth/google/login', new_tab=True))
 
 @ui.page("/dashboard", title="ATS Dashboard")
 async def dashboard(request: Request):
