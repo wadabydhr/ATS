@@ -113,3 +113,9 @@ async def dashboard():
 async def logout(request: Request):
     del app.storage.browser[JWT_TOKEN_KEY]
     return RedirectResponse("/")
+
+# Start the server
+if __name__ == "__main__":
+    import os
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
