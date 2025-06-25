@@ -9,6 +9,11 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 from starlette.middleware.sessions import SessionMiddleware
 
+
+import ssl, certifi
+print("OpenSSL version:", ssl.OPENSSL_VERSION)
+print("Certifi CA bundle:", certifi.where())
+
 # Load environment variables
 load_dotenv()
 
