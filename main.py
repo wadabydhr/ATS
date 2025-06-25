@@ -28,11 +28,16 @@ BASE_URL = os.getenv("BASE_URL")
 try:
     print("[DB] Connecting to MongoDB...")
     mongo_client = MongoClient(os.getenv("MONGO_URI"))
+    # Force a connection to verify credentials and network
+    mongo_client.admin.command('ping')
     db = mongo_client["ats_db"]
     users_collection = db["users"]
     print("[DB] Connection successful.")
 except Exception as e:
     print(f"[DB] Connection failed: {e}")
+    import sys
+    sys.exit(1)
+
 
 # Add SessionMiddleware for OAuth
 app.add_middleware(SessionMiddleware, secret_key=APP_STORAGE_SECRET)
