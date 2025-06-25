@@ -9,7 +9,7 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 from starlette.middleware.sessions import SessionMiddleware
 
-# Load environment variable
+# Load environment variables
 load_dotenv()
 
 APP_STORAGE_SECRET = os.getenv("APP_STORAGE_SECRET")
