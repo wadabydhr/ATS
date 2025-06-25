@@ -12,21 +12,17 @@ from starlette.middleware.sessions import SessionMiddleware
 # Load environment variables
 load_dotenv()
 
-# Configuration
 APP_STORAGE_SECRET = os.getenv("APP_STORAGE_SECRET")
 JWT_TOKEN_KEY = 'ats_jwt_token'
 JWT_TOKEN_LIFETIME = timedelta(days=7)
 BASE_URL = os.getenv("BASE_URL")
 
-# MongoDB connection
 mongo_client = MongoClient(os.getenv("MONGO_URI"))
 db = mongo_client["ats_db"]
 users_collection = db["users"]
 
-# Add SessionMiddleware for OAuth
 app.add_middleware(SessionMiddleware, secret_key=APP_STORAGE_SECRET)
 
-# OAuth configuration
 oauth = OAuth()
 oauth.register(
     "google",
