@@ -58,10 +58,12 @@ async def logout(request: Request):
 @ui.page('/')
 async def home(request: Request):
     user = get_current_user(request)
+    render_header(user)
     if user:
         return ui.navigate.to('/dashboard')
     ui.label('Welcome to ATS!').classes('text-2xl mt-8')
     ui.button('Login with Google', on_click=lambda: ui.run_javascript('window.location.replace("/oauth/google/login")'))
+    render_footer()
 
 @ui.page('/dashboard')
 async def dashboard(request: Request):
