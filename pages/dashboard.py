@@ -5,9 +5,8 @@ from components.menu import render_menu
 
 def dashboard_page(user):
     render_header(user)
-    with ui.row().classes('w-full'):
+    with ui.row().classes('w-full h-screen items-start justify-start mt-0'):
         with ui.column().classes('w-1/4 min-h-[60vh]'):
-            render_menu()
         with ui.column().classes('w-full items-start justify-start mt-0'):
             ui.label(f'Usuário - {user["name"]}!').classes('text-2xl mb-4')
             if user.get("picture"):
