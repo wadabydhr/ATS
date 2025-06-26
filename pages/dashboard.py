@@ -8,9 +8,9 @@ def dashboard_page(user):
     with ui.row().classes('w-full'):
         with ui.column().classes('w-1/4 min-h-[60vh]'):
             render_menu()
-        with ui.column().classes('w-3/4 p-4'):
-            ui.label(f'Hello, {user["name"]}!').classes('text-2xl mb-4')
+        with ui.column().classes('w-full items-start justify-start mt-0'):
+            ui.label(f'Usuário - {user["name"]}!').classes('text-2xl mb-4')
             if user.get("picture"):
                 ui.image(user["picture"]).classes('w-32 h-32 rounded-full mb-4')
-            ui.label('This is your dashboard.').classes('mb-4')
+            ui.label('Página para gerar relatórios.').classes('mb-4')
     render_footer()
