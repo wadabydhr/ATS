@@ -61,8 +61,15 @@ async def home(request: Request):
     render_header(user)
     if user:
         return ui.navigate.to('/dashboard')
-    ui.label('Welcome to ATS!').classes('text-2xl mt-8')
-    ui.button('Login with Google', on_click=lambda: ui.run_javascript('window.location.replace("/oauth/google/login")'))
+    with ui.row().classes('w-full h-[60vh] items-center justify-center'):
+        with ui.card().classes('w-96 mx-auto p-8 flex flex-col items-center'):
+            ui.label('ATS Beyond HR').classes('text-2xl mb-4')
+            ui.button(
+                'Login with Google',
+                on_click=lambda: ui.run_javascript('window.location.replace("/oauth/google/login")')
+            ).classes('mt-4 w-full')
+    #ui.label('ATS Beyond HR').classes('text-2xl mt-8')
+    #ui.button('Login with Google', on_click=lambda: ui.run_javascript('window.location.replace("/oauth/google/login")'))
     render_footer()
 
 @ui.page('/dashboard')
@@ -80,4 +87,6 @@ async def settings(request: Request):
     settings_page(user)
 
 if __name__ in {'__main__', '__mp_main__'}:
-    ui.run()
+    port = int(os.environ.get("PORT", 8080))
+    ui.run(host="0.0.0.0", port=port)
+    #ui.run()
