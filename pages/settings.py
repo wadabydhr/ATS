@@ -112,7 +112,7 @@ def settings_page(user):
                     if ok:
                         msg.text = ''
                         ui.notify(feedback, color='positive')
-                        refresh_table(company_table)
+                        refresh_table()
                         name.value = cnpj.value = cep.value = number.value = additional.value = city.value = state.value = ''
                     else:
                         msg.text = feedback
@@ -135,27 +135,28 @@ def settings_page(user):
                 {'name': 'actions', 'label': 'Ações', 'field': 'actions'},
             ]
 
+            # Table will hold dicts, not lists, for each row
             company_table = ui.table(
                 columns=columns[:-1], rows=[], row_key='_id', pagination=10
             ).classes('w-full max-w-full')
 
-            def refresh_table(table):
-                table.rows.clear()
+            def refresh_table():
+                company_table.rows.clear()
                 companies = get_all_companies()
                 for company in companies:
-                    row = [
-                        company.get('company_name', ''),
-                        company.get('company_CNPJ', ''),
-                        company.get('company_address_CEP', ''),
-                        company.get('company_address_number', ''),
-                        company.get('company_address_additional', ''),
-                        company.get('company_address_city', ''),
-                        company.get('company_address_state', ''),
-                        company.get('_id', ''),
-                    ]
-                    table.add_row(*row)
+                    row = {
+                        'company_name': company.get('company_name', ''),
+                        'company_CNPJ': company.get('company_CNPJ', ''),
+                        'company_address_CEP': company.get('company_address_CEP', ''),
+                        'company_address_number': company.get('company_address_number', ''),
+                        'company_address_additional': company.get('company_address_additional', ''),
+                        'company_address_city': company.get('company_address_city', ''),
+                        'company_address_state': company.get('company_address_state', ''),
+                        '_id': str(company.get('_id', '')),
+                    }
+                    company_table.add_row(row)
 
-            def edit_row(company_id, values):
+            def edit_row(company_id):
                 company = next((c for c in get_all_companies() if str(c['_id']) == str(company_id)), None)
                 if not company:
                     ui.notify('Empresa não encontrada', color='negative')
@@ -200,7 +201,7 @@ def settings_page(user):
                         if updated:
                             ui.notify('Empresa atualizada', color='positive')
                             dialog.close()
-                            refresh_table(company_table)
+                            refresh_table()
                         else:
                             edit_msg.text = "Nenhuma alteração feita ou erro ao atualizar empresa."
 
@@ -211,21 +212,22 @@ def settings_page(user):
             def delete_row(company_id):
                 if delete_company(company_id):
                     ui.notify('Empresa excluída', color='positive')
-                    refresh_table(company_table)
+                    refresh_table()
                 else:
                     ui.notify('Erro ao excluir empresa', color='negative')
 
+            # Render actions column with edit/delete (below the table for each row)
             def render_actions(row):
-                ui.button('Editar', on_click=lambda: edit_row(row[-1], row)).classes('mr-2')
-                ui.button('Excluir', on_click=lambda: delete_row(row[-1]), color='negative')
+                ui.button('Editar', on_click=lambda row=row: edit_row(row['_id'])).classes('mr-2')
+                ui.button('Excluir', on_click=lambda row=row: delete_row(row['_id']), color='negative')
 
-            refresh_table(company_table)
+            refresh_table()
 
-            # Render actions buttons for each row (NiceGUI table workaround)
+            # Render actions for each row
             for row in company_table.rows:
                 with ui.row().classes('gap-4'):
-                    for idx, col in enumerate(columns[:-1]):
-                        ui.label(str(row[idx])).classes('w-32')
+                    for col in columns[:-1]:
+                        ui.label(str(row[col['name']])).classes('w-32')
                     render_actions(row)
 
     render_footer()
