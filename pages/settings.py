@@ -63,24 +63,18 @@ def validate_state(state):
     return bool(re.fullmatch(r"[A-Za-z]{2}", state))
 
 def required_label(text):
-    # Returns a label with a red asterisk before the field name
     return ui.html(f'<span style="color: #e53935;">*</span> {text}').classes('font-bold')
 
 def settings_page(user):
     render_header(user)
 
-    # Remove top margin/padding on the main column to fix big gap
-    with ui.row().classes('w-full items-start'):
+    with ui.row().classes('w-full items-start mt-0 pt-0'):
         with ui.column().classes('w-1/4 min-h-[60vh] items-start pt-0 mt-0'):
             render_menu()
         with ui.column().classes('w-3/4 p-4 items-start pt-0 mt-0'):
-            # Remove unnecessary margin-top
             ui.label('Configurações - CRUD de Empresas (COMPANY)').classes('text-2xl font-bold mb-2 mt-0 pt-0')
-
-            # --- Tabela e CRUD ---
             ui.label('Empresas cadastradas').classes('text-lg font-bold mb-2 mt-2')
 
-            # Main table with Action buttons as columns
             columns = [
                 {'name': 'company_name', 'label': 'Empresa', 'field': 'company_name'},
                 {'name': 'company_CNPJ', 'label': 'CNPJ', 'field': 'company_CNPJ'},
@@ -93,7 +87,6 @@ def settings_page(user):
                 {'name': 'delete', 'label': 'Excluir', 'field': 'delete'},
             ]
 
-            # Store company data and UI elements for row actions
             table_rows = []
 
             def refresh_table():
@@ -109,8 +102,8 @@ def settings_page(user):
                         'company_address_additional': company.get('company_address_additional', ''),
                         'company_address_city': company.get('company_address_city', ''),
                         'company_address_state': company.get('company_address_state', ''),
-                        'edit': '',  # Placeholder for edit button
-                        'delete': '',  # Placeholder for delete button
+                        'edit': None,   # will be set after table is rendered
+                        'delete': None, # will be set after table is rendered
                         '_id': str(company.get('_id', '')),
                     }
                     table_rows.append(row_dict)
@@ -165,6 +158,7 @@ def settings_page(user):
                             ui.notify('Empresa atualizada', color='positive')
                             dialog.close()
                             refresh_table()
+                            patch_table_actions()
                         else:
                             edit_msg.text = "Nenhuma alteração feita ou erro ao atualizar empresa."
 
@@ -176,10 +170,10 @@ def settings_page(user):
                 if delete_company(company_id):
                     ui.notify('Empresa excluída', color='positive')
                     refresh_table()
+                    patch_table_actions()
                 else:
                     ui.notify('Erro ao excluir empresa', color='negative')
 
-            # Main NiceGUI Table
             with ui.element('div').classes('w-full'):
                 company_table = ui.table(
                     columns=columns,
@@ -188,12 +182,12 @@ def settings_page(user):
                     pagination=10
                 ).classes('w-full max-w-full')
 
-            # Patch the table with the correct row actions after rendering
             def patch_table_actions():
                 for i, row in enumerate(table_rows):
                     row_id = row['_id']
-                    company_table.rows[i]['edit'] = ui.button('✎', on_click=lambda rid=row_id: open_edit_dialog(rid), icon='edit', color='primary', size='sm').classes('q-mr-xs')
-                    company_table.rows[i]['delete'] = ui.button('🗑', on_click=lambda rid=row_id: delete_row(rid), icon='delete', color='negative', size='sm')
+                    # Remove `size` argument, only allowed: (label, on_click, icon, color, etc)
+                    company_table.rows[i]['edit'] = ui.button('✎', on_click=lambda rid=row_id: open_edit_dialog(rid), icon='edit', color='primary').classes('q-mr-xs')
+                    company_table.rows[i]['delete'] = ui.button('🗑', on_click=lambda rid=row_id: delete_row(rid), icon='delete', color='negative')
                 company_table.update()
 
             refresh_table()
@@ -202,8 +196,6 @@ def settings_page(user):
             # --- Formulario de Adição por último ---
             ui.separator()
             ui.label('Adicionar nova empresa').classes('text-lg font-bold mb-2 mt-8')
-
-            # Form fields with required indication
             with ui.row().classes('w-full'):
                 with ui.column().classes('w-1/2'):
                     required_label('Nome da empresa')
