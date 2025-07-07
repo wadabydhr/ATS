@@ -62,19 +62,64 @@ def validate_cep(cep):
 def validate_state(state):
     return bool(re.fullmatch(r"[A-Za-z]{2}", state))
 
-def required_label(text):
-    # Returns a label with a red asterisk before the field name
-    return ui.html(f'<span style="color: #e53935;">*</span> {text}').classes('font-bold')
-
 def settings_page(user):
     render_header(user)
-    with ui.row().classes('w-full items-start'):  # align all to top
-        with ui.column().classes('w-1/4 min-h-[60vh] items-start'):
+    with ui.row().classes('w-full'):
+        with ui.column().classes('w-1/4 min-h-[60vh]'):
             render_menu()
-        with ui.column().classes('w-3/4 p-4 items-start'):
+        with ui.column().classes('w-3/4 p-4'):
+            ui.label('Configurações - CRUD de Empresas (COMPANY)').classes('text-2xl font-bold mb-6')
 
-            # Remove gap at the top by not adding unnecessary margin or padding above
-            ui.label('Configurações - CRUD de Empresas (COMPANY)').classes('text-2xl font-bold mb-2')
+            # --- Formulario de Adição ---
+            with ui.card().classes('w-full max-w-2xl mb-8'):
+                ui.label('Adicionar nova empresa').classes('text-lg font-bold mb-2')
+
+                name = ui.input('Nome da empresa').classes('w-full')
+                cnpj = ui.input('CNPJ (000.000.000/0000-00)').classes('w-full').props('mask=###.###.###/####-##')
+                cep = ui.input('CEP (00000-000)').classes('w-full').props('mask=#####-###')
+                number = ui.input('Número').classes('w-full')
+                additional = ui.input('Complemento').classes('w-full')
+                city = ui.input('Cidade').classes('w-full')
+                state = ui.input('UF').classes('w-20').props('maxlength=2')
+
+                msg = ui.label().classes('mt-2 text-red-500')
+
+                def submit():
+                    if not (
+                        name.value and cnpj.value and cep.value and city.value and state.value
+                    ):
+                        msg.text = "Preencha todos os campos obrigatórios."
+                        return
+                    if not validate_cnpj(cnpj.value):
+                        msg.text = "CNPJ inválido. Use o formato 000.000.000/0000-00."
+                        return
+                    if not validate_cep(cep.value):
+                        msg.text = "CEP inválido. Use o formato 00000-000."
+                        return
+                    if not validate_state(state.value):
+                        msg.text = "UF inválido. Use dois caracteres."
+                        return
+                    data = {
+                        "company_name": name.value,
+                        "company_CNPJ": cnpj.value,
+                        "company_address_CEP": cep.value,
+                        "company_address_number": number.value,
+                        "company_address_additional": additional.value,
+                        "company_address_city": city.value,
+                        "company_address_state": state.value.upper(),
+                    }
+                    ok, feedback = add_company(data)
+                    if ok:
+                        msg.text = ''
+                        ui.notify(feedback, color='positive')
+                        refresh_table()
+                        name.value = cnpj.value = cep.value = number.value = additional.value = city.value = state.value = ''
+                    else:
+                        msg.text = feedback
+
+                ui.button('Adicionar', on_click=submit).classes('mt-2')
+
+            ui.separator()
 
             # --- Tabela e CRUD ---
             ui.label('Empresas cadastradas').classes('text-lg font-bold mb-2')
@@ -90,6 +135,7 @@ def settings_page(user):
                 {'name': 'actions', 'label': 'Ações', 'field': 'actions'},
             ]
 
+            # Table will hold dicts, not lists, for each row
             company_table = ui.table(
                 columns=columns[:-1], rows=[], row_key='_id', pagination=10
             ).classes('w-full max-w-full')
@@ -118,16 +164,13 @@ def settings_page(user):
 
                 with ui.dialog() as dialog, ui.card():
                     ui.label('Editar empresa').classes('text-lg font-bold mb-2')
-                    with ui.row().classes('w-full'):
-                        with ui.column().classes('w-1/2'):
-                            edit_name = ui.input('Nome da empresa', value=company.get('company_name', '')).classes('w-full')
-                            edit_cnpj = ui.input('CNPJ (000.000.000/0000-00)', value=company.get('company_CNPJ', '')).classes('w-full').props('mask=###.###.###/####-##')
-                            edit_cep = ui.input('CEP (00000-000)', value=company.get('company_address_CEP', '')).classes('w-full').props('mask=#####-###')
-                            edit_number = ui.input('Número', value=company.get('company_address_number', '')).classes('w-full')
-                        with ui.column().classes('w-1/2'):
-                            edit_additional = ui.input('Complemento', value=company.get('company_address_additional', '')).classes('w-full')
-                            edit_city = ui.input('Cidade', value=company.get('company_address_city', '')).classes('w-full')
-                            edit_state = ui.input('UF', value=company.get('company_address_state', '')).classes('w-20').props('maxlength=2')
+                    edit_name = ui.input('Nome da empresa', value=company.get('company_name', '')).classes('w-full')
+                    edit_cnpj = ui.input('CNPJ (000.000.000/0000-00)', value=company.get('company_CNPJ', '')).classes('w-full').props('mask=###.###.###/####-##')
+                    edit_cep = ui.input('CEP (00000-000)', value=company.get('company_address_CEP', '')).classes('w-full').props('mask=#####-###')
+                    edit_number = ui.input('Número', value=company.get('company_address_number', '')).classes('w-full')
+                    edit_additional = ui.input('Complemento', value=company.get('company_address_additional', '')).classes('w-full')
+                    edit_city = ui.input('Cidade', value=company.get('company_address_city', '')).classes('w-full')
+                    edit_state = ui.input('UF', value=company.get('company_address_state', '')).classes('w-20').props('maxlength=2')
                     edit_msg = ui.label().classes('mt-2 text-red-500')
 
                     def save_edit():
@@ -173,6 +216,7 @@ def settings_page(user):
                 else:
                     ui.notify('Erro ao excluir empresa', color='negative')
 
+            # Render actions column with edit/delete (below the table for each row)
             def render_actions(row):
                 ui.button('Editar', on_click=lambda row=row: edit_row(row['_id'])).classes('mr-2')
                 ui.button('Excluir', on_click=lambda row=row: delete_row(row['_id']), color='negative')
@@ -185,65 +229,5 @@ def settings_page(user):
                     for col in columns[:-1]:
                         ui.label(str(row[col['name']])).classes('w-32')
                     render_actions(row)
-
-            # --- Formulario de Adição por último ---
-            ui.separator()
-            ui.label('Adicionar nova empresa').classes('text-lg font-bold mb-2 mt-8')
-
-            # Form fields with required indication
-            with ui.row().classes('w-full'):
-                with ui.column().classes('w-1/2'):
-                    required_label('Nome da empresa')
-                    name = ui.input('', placeholder='Nome da empresa').classes('w-full')
-                    required_label('CNPJ (000.000.000/0000-00)')
-                    cnpj = ui.input('', placeholder='000.000.000/0000-00').classes('w-full').props('mask=###.###.###/####-##')
-                    required_label('CEP (00000-000)')
-                    cep = ui.input('', placeholder='00000-000').classes('w-full').props('mask=#####-###')
-                    ui.label('Número')
-                    number = ui.input('', placeholder='Número').classes('w-full')
-                with ui.column().classes('w-1/2'):
-                    ui.label('Complemento')
-                    additional = ui.input('', placeholder='Complemento').classes('w-full')
-                    required_label('Cidade')
-                    city = ui.input('', placeholder='Cidade').classes('w-full')
-                    required_label('UF')
-                    state = ui.input('', placeholder='UF').classes('w-20').props('maxlength=2')
-
-            msg = ui.label().classes('mt-2 text-red-500')
-
-            def submit():
-                if not (
-                    name.value and cnpj.value and cep.value and city.value and state.value
-                ):
-                    msg.text = "Preencha todos os campos obrigatórios."
-                    return
-                if not validate_cnpj(cnpj.value):
-                    msg.text = "CNPJ inválido. Use o formato 000.000.000/0000-00."
-                    return
-                if not validate_cep(cep.value):
-                    msg.text = "CEP inválido. Use o formato 00000-000."
-                    return
-                if not validate_state(state.value):
-                    msg.text = "UF inválido. Use dois caracteres."
-                    return
-                data = {
-                    "company_name": name.value,
-                    "company_CNPJ": cnpj.value,
-                    "company_address_CEP": cep.value,
-                    "company_address_number": number.value,
-                    "company_address_additional": additional.value,
-                    "company_address_city": city.value,
-                    "company_address_state": state.value.upper(),
-                }
-                ok, feedback = add_company(data)
-                if ok:
-                    msg.text = ''
-                    ui.notify(feedback, color='positive')
-                    refresh_table()
-                    name.value = cnpj.value = cep.value = number.value = additional.value = city.value = state.value = ''
-                else:
-                    msg.text = feedback
-
-            ui.button('Adicionar', on_click=submit).classes('mt-2')
 
     render_footer()
