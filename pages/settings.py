@@ -7,7 +7,6 @@ from bson.objectid import ObjectId
 import re
 import os
 
-# MongoDB connection for Render.com or local
 MONGO_URI = os.getenv(
     "MONGO_URI",
     "mongodb+srv://hirokiwada:BYNDHR19hiw@byndhr-cluster.1zn6ljk.mongodb.net/?retryWrites=true&w=majority&appName=BYNDHR-CLUSTER"
@@ -55,10 +54,8 @@ def delete_company(company_id):
 
 def validate_cnpj(cnpj):
     return bool(re.fullmatch(r"\d{3}\.\d{3}\.\d{3}/\d{4}-\d{2}", cnpj))
-
 def validate_cep(cep):
     return bool(re.fullmatch(r"\d{5}-\d{3}", cep))
-
 def validate_state(state):
     return bool(re.fullmatch(r"[A-Za-z]{2}", state))
 
@@ -87,34 +84,31 @@ def settings_page(user):
                 {'name': 'delete', 'label': 'Excluir', 'field': 'delete'},
             ]
 
-            table_rows = []
+            # --- NiceGUI Table with row_builder for buttons ---
+            def get_table_data():
+                companies = get_all_companies()
+                return [
+                    {
+                        'company_name': c.get('company_name', ''),
+                        'company_CNPJ': c.get('company_CNPJ', ''),
+                        'company_address_CEP': c.get('company_address_CEP', ''),
+                        'company_address_number': c.get('company_address_number', ''),
+                        'company_address_additional': c.get('company_address_additional', ''),
+                        'company_address_city': c.get('company_address_city', ''),
+                        'company_address_state': c.get('company_address_state', ''),
+                        '_id': str(c.get('_id', '')),
+                    } for c in companies
+                ]
 
             def refresh_table():
-                company_table.rows.clear()
-                table_rows.clear()
-                companies = get_all_companies()
-                for company in companies:
-                    row_dict = {
-                        'company_name': company.get('company_name', ''),
-                        'company_CNPJ': company.get('company_CNPJ', ''),
-                        'company_address_CEP': company.get('company_address_CEP', ''),
-                        'company_address_number': company.get('company_address_number', ''),
-                        'company_address_additional': company.get('company_address_additional', ''),
-                        'company_address_city': company.get('company_address_city', ''),
-                        'company_address_state': company.get('company_address_state', ''),
-                        'edit': None,   # will be set after table is rendered
-                        'delete': None, # will be set after table is rendered
-                        '_id': str(company.get('_id', '')),
-                    }
-                    table_rows.append(row_dict)
-                    company_table.add_row(row_dict)
+                company_table.rows = get_table_data()
+                company_table.update()
 
             def open_edit_dialog(company_id):
                 company = next((c for c in get_all_companies() if str(c['_id']) == str(company_id)), None)
                 if not company:
                     ui.notify('Empresa não encontrada', color='negative')
                     return
-
                 with ui.dialog() as dialog, ui.card():
                     ui.label('Editar empresa').classes('text-lg font-bold mb-2')
                     with ui.row().classes('w-full'):
@@ -128,7 +122,6 @@ def settings_page(user):
                             edit_city = ui.input('Cidade', value=company.get('company_address_city', '')).classes('w-full')
                             edit_state = ui.input('UF', value=company.get('company_address_state', '')).classes('w-20').props('maxlength=2')
                     edit_msg = ui.label().classes('mt-2 text-red-500')
-
                     def save_edit():
                         if not (
                             edit_name.value and edit_cnpj.value and edit_cep.value and edit_city.value and edit_state.value
@@ -158,10 +151,8 @@ def settings_page(user):
                             ui.notify('Empresa atualizada', color='positive')
                             dialog.close()
                             refresh_table()
-                            patch_table_actions()
                         else:
                             edit_msg.text = "Nenhuma alteração feita ou erro ao atualizar empresa."
-
                     ui.button('Salvar', on_click=save_edit).props('color=primary')
                     ui.button('Cancelar', on_click=dialog.close).props('color=secondary')
                 dialog.open()
@@ -170,28 +161,33 @@ def settings_page(user):
                 if delete_company(company_id):
                     ui.notify('Empresa excluída', color='positive')
                     refresh_table()
-                    patch_table_actions()
                 else:
                     ui.notify('Erro ao excluir empresa', color='negative')
+
+            # The row_builder builds the row and injects the edit/delete buttons as cell content
+            def row_builder(row):
+                ui.table_row(
+                    [
+                        row['company_name'],
+                        row['company_CNPJ'],
+                        row['company_address_CEP'],
+                        row['company_address_number'],
+                        row['company_address_additional'],
+                        row['company_address_city'],
+                        row['company_address_state'],
+                        ui.button('✎', on_click=lambda r=row: open_edit_dialog(r['_id']), icon='edit', color='primary').props('flat dense'),
+                        ui.button('🗑', on_click=lambda r=row: delete_row(r['_id']), icon='delete', color='negative').props('flat dense'),
+                    ]
+                )
 
             with ui.element('div').classes('w-full'):
                 company_table = ui.table(
                     columns=columns,
-                    rows=[],
+                    rows=get_table_data(),
                     row_key='_id',
-                    pagination=10
+                    pagination=10,
+                    row_builder=row_builder
                 ).classes('w-full max-w-full')
-
-            def patch_table_actions():
-                for i, row in enumerate(table_rows):
-                    row_id = row['_id']
-                    # Remove `size` argument, only allowed: (label, on_click, icon, color, etc)
-                    company_table.rows[i]['edit'] = ui.button('✎', on_click=lambda rid=row_id: open_edit_dialog(rid), icon='edit', color='primary').classes('q-mr-xs')
-                    company_table.rows[i]['delete'] = ui.button('🗑', on_click=lambda rid=row_id: delete_row(rid), icon='delete', color='negative')
-                company_table.update()
-
-            refresh_table()
-            patch_table_actions()
 
             # --- Formulario de Adição por último ---
             ui.separator()
@@ -245,7 +241,6 @@ def settings_page(user):
                     msg.text = ''
                     ui.notify(feedback, color='positive')
                     refresh_table()
-                    patch_table_actions()
                     name.value = cnpj.value = cep.value = number.value = additional.value = city.value = state.value = ''
                 else:
                     msg.text = feedback
