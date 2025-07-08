@@ -54,8 +54,10 @@ def delete_company(company_id):
 
 def validate_cnpj(cnpj):
     return bool(re.fullmatch(r"\d{3}\.\d{3}\.\d{3}/\d{4}-\d{2}", cnpj))
+
 def validate_cep(cep):
     return bool(re.fullmatch(r"\d{5}-\d{3}", cep))
+
 def validate_state(state):
     return bool(re.fullmatch(r"[A-Za-z]{2}", state))
 
@@ -174,7 +176,7 @@ def settings_page(user):
                     selection='single'
                 ).classes('w-full max-w-full')
 
-            @company_table.on('selection')
+            # Define the callback function first
             def on_selection(e):
                 selected = e.args
                 if selected and isinstance(selected, list) and len(selected) > 0:
@@ -186,6 +188,9 @@ def settings_page(user):
                 else:
                     selected_row['data'] = None
                     action_row.visible = False
+
+            # Register event callback using method, not decorator
+            company_table.on('selection', on_selection)
 
             with ui.row().classes('q-mt-md') as action_row:
                 edit_btn = ui.button('Editar', on_click=lambda: open_edit_dialog(selected_row['data'])).props('color=primary')
