@@ -7,10 +7,9 @@ from bson.objectid import ObjectId
 import re
 import os
 
-MONGO_URI = os.getenv(
-    "MONGO_URI",
-    "mongodb+srv://hirokiwada:BYNDHR19hiw@byndhr-cluster.1zn6ljk.mongodb.net/?retryWrites=true&w=majority&appName=BYNDHR-CLUSTER"
-)
+MONGO_URI = os.getenv("MONGO_URI")
+if not MONGO_URI:
+    raise RuntimeError("MONGO_URI environment variable not set")
 MONGO_DB = os.getenv("MONGODB_DB", "report_generator")
 MONGO_COLLECTION = os.getenv("MONGODB_COMPANIES_COLLECTION", "companies")
 
